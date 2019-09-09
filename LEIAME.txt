@@ -1,0 +1,11 @@
+Se você quer as visões materializadas do Oracle (ou snapshots) no seu banco de
+dados PostgreSQL, então este é o seu projeto.
+
+PostgreSQL::Snapshots requer PostgreSQL 8.0 ou superior, e foi testado com o Perl 5.8.5.  
+
+Esta primeira versão é totalmente funcional e implementa um suporte a
+snapshots entre bancos PostgreSQL e entre o PostgreSQL e o Oracle. 
+
+A próxima etapa implementará atualizações automáticas baseadas em intervalos
+informados no momento da criação do snapshot.
+ 

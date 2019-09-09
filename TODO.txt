@@ -1,0 +1,8 @@
+This file represents items to be addressed.
+
+1.  Extend the snapshot creation process and allow automatic refresh intervals
+to be given
+
+2.  Extend the PostgreSQL grammar to recognize "CREATE DBLINK", "DROP DBLINK", "CREATE SNAPSHOT", "DROP SNAPSHOT", "CREATE SNAPSHOT LOG", "DROP SNAPSHOT LOG" and "REFRESH SNAPSHOT" as native SQL commands.
+
+3. Support scheduling of refreshes (based on date+interval)

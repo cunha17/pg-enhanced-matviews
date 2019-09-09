@@ -1,0 +1,129 @@
+Aqui está como utilizar o PostgreSQL::Snapshots:
+
+Como superusuário do banco de dados (normalmente postgres, mas cheque no seu sistema), faça o seguinte:
+
+INSTALAÇÃO
+
+1. Carregue o PL/Perlu no seu banco de dados.  Veja a documentação do comando createlang para detalhes em como fazer isso;
+
+2. Certifique-se que o DBI está instalado no seu sistema Perl e que o DBD do
+banco de dados escolhido também está instalado;
+
+3. Edite o arquivo Makefile.sh, alterando a variável KEY para um valor
+"secreto" e a variável BASE_SCHEMA para o esquema onde serão colocadas as tabelas internas do Pg::Snapshot. Lembre-se também de configurar as demais variáveis como: SUPERUSER.
+
+4. Execute no diretório raiz do PostgreSQL::Snapshots:
+	# ./Makefile.sh
+
+5. Carregue o driver para o banco de dados:
+	- No PostgreSQL:
+		# psql -d <database> -h <host> -U <user> -f ./drivers/pg/snapsho
+t.sql
+	- No Oracle, dento do SQL+:
+		SQL> @./drivers/oracle/snapshot.sql
+
+6. Carregue o arquivo pgsnapshots.sql:
+	# psql -d <database> -h <host> -U <user> -f pgsnapshots.sql
+
+7. Autorize o acesso da sua estação(ou do seu servidor remoto) a uma ou mais
+tabelas master para cada banco de dados:
+	- Dentro do psql, conectado como usuário POSTGRES:
+		# select snapshot_do('<key>', 'ALLOW', '<masterschema>',
+'<mastername>', '<ip>');
+	- ou dentro do SQL+, conectado como usuário SYS:
+		SQL> begin 
+		     snapshot_do('<key>', 'ALLOW', '<masterschema>', '<mastername>', '<ip>');
+		     end;
+		     /
+	Onde:
+		<key> é o valor "secreto" colocado na variável KEY do arquivo
+Makefile.sh.
+		<masterschema> é o esquema da tabela master que você deseja
+liberar
+		<mastername> é o nome da tabela master que você deseja liberar
+		<ip> é o endereço IP da estação/servidor para a qual você
+deseja liberar o acesso
+
+8. Use as funções abaixo conforme necessário.
+
+FUNÇÕES DISPONÍVEIS
+
+1. create_dblink (implementação de "CREATE DBLINK")
+	Essa função cria uma ligação entre banco de dados. Recebe como parâmetro o nome do DBLINK a ser criado, além dos dados necessários para o estabelecimento da conexão remota.
+	
+	Sintaxe:
+	create_dblink(dblinkname text, datasource text, username text, password text, attributes text)
+	dblinkname = nome do DBLINK a ser criado
+	datasource = string de CONEXÃO Perl:DBI para o banco de dados remoto
+	username = NOME do usuário no banco de dados remoto
+	password = SENHA do usuário no banco de dados remoto
+	attributes = atributos da conexão, tal como AutoCommit, RaiseErrors, etc.
+
+2. drop_dblink (implementação de "DROP DBLINK")
+	Essa função remove uma ligação entre banco de dados, recebendo como parâmetro apenas o nome do DBLink.
+	
+	Sintaxe:
+	drop_dblink(dblinkname text)
+	dblinkname = nome do DBLINK a ser removido
+
+3. create_snapshot (implementação de "CREATE SNAPSHOT" ou "CREATE MATERIALIZED VIEW")
+	Essa função cria uma visão materializada (MATERIALIZED VIEW ou SNAPSHOT) baseada em um consulta. Essa consulta pode, ou não, estar referenciando um
+DBLink.
+	
+	Sintaxe:
+	create_snapshot(schemaname text, snapshotname text, query text, dblink text, refresh_method text, prebuilt_table text)
+	schemaname: nome do esquema onde será criado o snapshot
+	snapshotname: nome do snapshot a ser criado. Se prebuilt_table for
+fornecido, esse nome é apenas um nome fantasia, caso contrário, será o nome da
+tabela-resultado criada.
+	query: consulta que será executada no servidor remoto e cujo resultado
+preencherá o snapshot no banco de dados local
+	dblink: informação opcional que contém o nome do dblink a ser
+utilizado. Caso seja informado NULL, a consulta será enviada ao banco de dados
+local.
+	refresh_method: pode ser COMPLETE, FAST ou FORCE.
+	prebuilt_table: nome da tabela existente, no mesmo esquema do snapshot, sobre a qual o snapshot será criado (dados existentes são preservados). Este parâmetro é opcional.
+
+	IMPORTANTE: a tabela não será preenchida por esse comando.
+
+4. drop_snapshot (implementação de "DROP SNAPSHOT" ou "DROP MATERIALIZED
+VIEW")
+	Essa função remove uma visão materializada (MATERIALIZED VIEW ou SNAPSHOT) recebendo como parâmetro o nome do Esquema e do Snapshot.
+	
+	Sintaxe:
+	drop_snapshot (schemaname text, snapshotname text)
+	schemaname: nome do esquema onde está o snapshot a ser removido
+	snapshotname: nome do snapshot a ser removido
+
+5. create_snapshot_log (implementação de "CREATE MATERIALIZED VIEW LOG" ou
+"CREATE SNAPSHOT LOG")
+	Essa função cria uma tabela de logs acoplada a uma tabela master. Essa
+tabela de logs permite a criação de snapshots com atualização rápida (FAST
+REFRESH).
+	
+	Sintaxe:
+	create_snapshot_log (schemaname text, mastername text, withwhat text)
+	schemaname: nome do esquema onde está a tabela master
+	mastername: nome da tabela master
+        withwhat: indica se o snapshot log deve salvar a chave primária, o OID do registro ou ambos quando registros da tabela master forem atualizados(INSERT, UPDATE, DELETE). Esta cláusula também especifica se colunas adicionais para futura filtragem de sincronização, as quais não fazem parte da chave primária e são referenciadas pelo snapshot, devem ser salvas. A sintaxe é a seguinte:
+            1) "PRIMARY KEY": indica que a chave primária de todos os registros atualizados na tabela master devem ser gravados no snapshot log;
+            2) "OID": indica que o OID de todos os registros atualizados na tabela master devem ser gravados no snapshot log;
+            3) "(<filter-columns>)" : uma lista separada por vírgulas e delimitada por parênteses especificando colunas de filtro adicionais a serem gravadas no snapshot log. Para snapshots atualizáveis pelo método FAST, definidos com subconsultas, todas as colunas referenciadas pela subconsulta devem ser gravadas no snapshot log;
+            4) Qualquer combinação das opções acima, em qualquer ordem.
+
+6. drop_snapshot_log (implementação de "DROP MATERIALIZED VIEW LOG" ou "DROP SNAPSHOT LOG")
+	Essa função remove uma tabela de logs acoplada a uma tabela master.
+
+	Sintaxe:
+	drop_snapshot_log (schemaname text, mastername text)
+	schemaname: nome do esquema onde está a tabela master
+	mastername: nome da tabela master
+
+7. refresh_snapshot (implementação de "DBMS_SNAPSHOTS.REFRESH")
+	Essa função atualiza os dados de uma visão materializada (MATERIALIZED VIEW ou SNAPSHOT) recebendo como parâmetro o nome do esquema e do Snapshot.
+	
+	Sintaxe:
+	refresh_snapshot (schemaname text, snapshotname text)
+	schemaname: nome do esquema onde está o snapshot
+	snapshotname: nome do snapshot a ser atualizado
+

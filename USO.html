@@ -1,0 +1,135 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <meta content="text/html; charset=ISO-8859-1" http-equiv="content-type">
+  <title>Como utilizar o Pg::Snapshots</title>
+</head>
+<body>
+<div style="text-align:center"><a href="http://cunha17.cristianoduarte.pro.br/postgresql/snapshots.php">PostgreSQL::Snapshots</a></div>
+<div style="text-align: center;"><big><big><span style="font-weight: bold;">Como utilizar o Pg::Snapshots</span></big></big><br>
+</div>
+Aqui est&aacute; como utilizar o PostgreSQL::Snapshots:<br>
+<br>
+Como superusu&aacute;rio do banco de dados (normalmente postgres, mas cheque no seu sistema), fa&ccedil;a o seguinte:<br>
+<br>
+<big style="text-decoration: underline;"><big><span style="font-weight: bold;">INSTALA&Ccedil;&Atilde;O</span></big></big><br>
+<br>
+1. Carregue o PL/Perlu no seu banco de dados.&nbsp; Veja a
+documenta&ccedil;&atilde;o do comando createlang para detalhes em como
+fazer isso;<br>
+<br>
+2. Certifique-se que o DBI est&aacute; instalado no seu sistema Perl e que o DBD do banco de dados escolhido tamb&eacute;m est&aacute; instalado;<br>
+<br>
+3. Edite o arquivo <span style="font-weight: bold; font-style: italic;">Makefile.sh</span>, alterando a vari&aacute;vel KEY para um valor "secreto" e a vari&aacute;vel <span style="font-weight: bold; font-style: italic;">BASE_SCHEMA</span> para o esquema onde ser&atilde;o colocadas as tabelas internas do Pg::Snapshot. Lembre-se tamb&eacute;m de configurar as demais vari&aacute;veis como: <span style="font-weight: bold; font-style: italic;">SUPERUSER</span>.<br>
+<br>
+4. Execute no diret&oacute;rio raiz do PostgreSQL::Snapshots:<br>
+<code>&nbsp;&nbsp;&nbsp; <span style="font-weight: bold;"># ./Makefile.sh</span></code><br>
+<br>
+5. Carregue o driver para o banco de dados:<br>
+&nbsp;&nbsp; &nbsp;- No PostgreSQL:<br>
+<code>&nbsp;&nbsp; &nbsp;<span style="font-weight: bold;"># psql -d &lt;database&gt; -h &lt;host&gt; -U &lt;user&gt; -f ./drivers/pg/snapshot.sql</span></code><br>
+&nbsp;&nbsp; &nbsp;- No Oracle, dento do SQL+:<br>
+<code>&nbsp;&nbsp; &nbsp;<span style="font-weight: bold;">SQL&gt; @./drivers/oracle/snapshot.sql</span></code><br>
+<br>
+6. Carregue o arquivo pgsnapshots.sql:<br>
+<code>&nbsp;&nbsp; &nbsp;<span style="font-weight: bold;"># psql -d &lt;database&gt; -h &lt;host&gt; -U &lt;user&gt; -f pgsnapshots.sql</span></code><br>
+<br>
+7. Autorize o acesso da sua esta&ccedil;&atilde;o(ou do seu servidor remoto) a uma ou mais tabelas master para cada banco de dados:<br>
+&nbsp;&nbsp; &nbsp;- Dentro do psql, conectado como usu&aacute;rio POSTGRES:<br>
+<code>&nbsp; &nbsp;&nbsp;<span style="font-weight: bold;">db=# select snapshot_do('&lt;key&gt;', 'ALLOW', '&lt;masterschema&gt;', '&lt;mastername&gt;', '&lt;ip&gt;');</span></code><br>
+&nbsp;&nbsp; &nbsp;- ou dentro do SQL+, conectado como usu&aacute;rio SYS:<br>
+<code>&nbsp; &nbsp; <span style="font-weight: bold;">SQL&gt; begin</span><br style="font-weight: bold;">
+<span style="font-weight: bold;">&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; snapshot_do('</span><span style="font-style: italic; font-weight: bold;">&lt;key&gt;</span><span style="font-weight: bold;">', 'ALLOW', '</span><span style="font-style: italic; font-weight: bold;">&lt;masterschema&gt;</span><span style="font-weight: bold;">', '</span><span style="font-style: italic; font-weight: bold;">&lt;mastername&gt;</span><span style="font-weight: bold;">', '</span><span style="font-style: italic; font-weight: bold;">&lt;ip&gt;</span><span style="font-weight: bold;">');</span><br style="font-weight: bold;">
+<span style="font-weight: bold;">&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; end;</span><br style="font-weight: bold;">
+<span style="font-weight: bold;">&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /</span></code><br>
+&nbsp;&nbsp; &nbsp;Onde:<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;<span style="font-weight: bold; font-style: italic;">&lt;key&gt;</span> &eacute; o valor "secreto" colocado na vari&aacute;vel KEY do arquivo Makefile.sh.<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;<span style="font-weight: bold; font-style: italic;">&lt;masterschema&gt;</span> &eacute; o esquema da tabela master que voc&ecirc; deseja liberar<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;<span style="font-weight: bold; font-style: italic;">&lt;mastername&gt;</span> &eacute; o nome da tabela master que voc&ecirc; deseja liberar<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;<span style="font-weight: bold; font-style: italic;">&lt;ip&gt;</span> &eacute; o endere&ccedil;o IP da esta&ccedil;&atilde;o/servidor para a qual voc&ecirc; deseja liberar o acesso<br>
+<br>
+8. Use as fun&ccedil;&otilde;es abaixo conforme necess&aacute;rio.<br>
+<br>
+<big style="text-decoration: underline;"><big><span style="font-weight: bold;">FUN&Ccedil;&Otilde;ES DISPON&Iacute;VEIS</span></big></big><br>
+<br>
+<big><span style="font-weight: bold;">1. create_dblink (implementa&ccedil;&atilde;o de "CREATE DBLINK")</span></big><br>
+&nbsp;&nbsp; &nbsp;Essa fun&ccedil;&atilde;o cria uma
+liga&ccedil;&atilde;o entre banco de dados. Recebe como par&acirc;metro
+o nome do DBLINK a ser criado, al&eacute;m dos dados necess&aacute;rios
+para o estabelecimento da conex&atilde;o remota.<br>
+&nbsp;&nbsp; &nbsp;<br>
+&nbsp;&nbsp; &nbsp;<span style="font-weight: bold; font-style: italic;">Sintaxe:</span><br>
+&nbsp;&nbsp; &nbsp;<span style="font-weight: bold; color: rgb(0, 0, 153);">create_dblink(dblinkname text, datasource text, username text, password text, attributes text)</span><br>
+&nbsp;&nbsp; &nbsp;<span style="text-decoration: underline;">dblinkname</span>: nome do DBLINK a ser criado<br>
+&nbsp;&nbsp; &nbsp;<span style="text-decoration: underline;">datasource</span>: string de CONEX&Atilde;O Perl:DBI para o banco de dados remoto<br>
+&nbsp;&nbsp; &nbsp;<span style="text-decoration: underline;">username</span>: NOME do usu&aacute;rio no banco de dados remoto<br>
+&nbsp;&nbsp; &nbsp;<span style="text-decoration: underline;">password</span>: SENHA do usu&aacute;rio no banco de dados remoto<br>
+&nbsp;&nbsp; &nbsp;<span style="text-decoration: underline;">attributes</span>: atributos da conex&atilde;o, tal como AutoCommit, RaiseErrors, etc.<br>
+<br>
+<big><span style="font-weight: bold;">2. drop_dblink (implementa&ccedil;&atilde;o de "DROP DBLINK")</span></big><br>
+&nbsp;&nbsp; &nbsp;Essa fun&ccedil;&atilde;o remove uma
+liga&ccedil;&atilde;o entre banco de dados, recebendo como
+par&acirc;metro apenas o nome do DBLink.<br>
+&nbsp;&nbsp; &nbsp;<br>
+&nbsp;&nbsp; &nbsp;<span style="font-weight: bold; font-style: italic;">Sintaxe:</span><br>
+&nbsp;&nbsp; &nbsp;<span style="font-weight: bold; color: rgb(0, 0, 153);">drop_dblink(dblinkname text)</span><br>
+&nbsp;&nbsp; &nbsp;<span style="text-decoration: underline;">dblinkname</span>: nome do DBLINK a ser removido<br>
+<br>
+<big><span style="font-weight: bold;">3. create_snapshot (implementa&ccedil;&atilde;o de "CREATE SNAPSHOT" ou "CREATE MATERIALIZED VIEW")</span></big><br>
+&nbsp;&nbsp; &nbsp;Essa fun&ccedil;&atilde;o cria uma vis&atilde;o materializada (MATERIALIZED VIEW ou SNAPSHOT) baseada em um consulta. Essa consulta pode, ou n&atilde;o, estar referenciando um DBLink.<br>
+&nbsp;&nbsp; &nbsp;<br>
+&nbsp;&nbsp; &nbsp;<span style="font-weight: bold; font-style: italic;">Sintaxe:</span><br>
+&nbsp;&nbsp; &nbsp;<span style="font-weight: bold; color: rgb(0, 0, 153);">create_snapshot(schemaname text, snapshotname text,
+query text, dblink text, refresh_method text, prebuilt_table text)</span><br>
+&nbsp;&nbsp; &nbsp;<span style="text-decoration: underline;">schemaname</span>: nome do esquema onde ser&aacute; criado o snapshot<br>
+&nbsp;&nbsp; &nbsp;<span style="text-decoration: underline;">snapshotname</span>: nome do snapshot a ser criado. Se prebuilt_table for fornecido, esse nome &eacute; apenas um nome fantasia, caso contr&aacute;rio, ser&aacute; o nome da tabela-resultado criada.<br>
+&nbsp;&nbsp; &nbsp;<span style="text-decoration: underline;">query</span>: consulta que ser&aacute; executada no servidor remoto e cujo resultado preencher&aacute; o snapshot no banco de dados local<br>
+&nbsp;&nbsp; &nbsp;<span style="text-decoration: underline;">dblink</span>: informa&ccedil;&atilde;o opcional que cont&eacute;m o nome do dblink a ser utilizado. Caso seja informado NULL, a consulta ser&aacute; enviada ao banco de dados local.<br>
+&nbsp;&nbsp; &nbsp;<span style="text-decoration: underline;">refresh_method</span>: pode ser COMPLETE, FAST ou FORCE.<br>
+&nbsp;&nbsp; &nbsp;<span style="text-decoration: underline;">prebuilt_table</span>: nome da tabela existente, no mesmo esquema do snapshot, sobre a qual o snapshot ser&aacute; criado (dados existentes s&atilde;o preservados). Este par&acirc;metro &eacute; opcional.<br>
+<br>
+&nbsp;&nbsp;<span style="font-weight: bold; color: rgb(255, 0, 0);">IMPORTANTE: a tabela n&atilde;o ser&aacute; preenchida por esse comando.</span><br>
+<br>
+<big><span style="font-weight: bold;">4. drop_snapshot (implementa&ccedil;&atilde;o de "DROP SNAPSHOT" ou "DROP MATERIALIZED VIEW")</span></big><br>
+&nbsp;&nbsp; &nbsp;Essa fun&ccedil;&atilde;o remove uma vis&atilde;o
+materializada (MATERIALIZED VIEW ou SNAPSHOT) recebendo como
+par&acirc;metro o nome do Esquema e do Snapshot.<br>
+&nbsp;&nbsp; &nbsp;<br>
+&nbsp;&nbsp; &nbsp;<span style="font-weight: bold; font-style: italic;">Sintaxe:</span><br>
+&nbsp;&nbsp; &nbsp;<span style="font-weight: bold; color: rgb(0, 0, 153);">drop_snapshot (schemaname text, snapshotname text)</span><br>
+&nbsp;&nbsp; &nbsp;<span style="text-decoration: underline;">schemaname</span>: nome do esquema onde est&aacute; o snapshot a ser removido<br>
+&nbsp;&nbsp; &nbsp;<span style="text-decoration: underline;">snapshotname</span>: nome do snapshot a ser removido<br>
+<br>
+<big><span style="font-weight: bold;">5. create_snapshot_log (implementa&ccedil;&atilde;o de "CREATE MATERIALIZED VIEW LOG" ou "CREATE SNAPSHOT LOG")</span></big><br>
+&nbsp;&nbsp; &nbsp;Essa fun&ccedil;&atilde;o cria uma tabela de logs acoplada a uma tabela master. Essa tabela de logs permite a cria&ccedil;&atilde;o de snapshots com atualiza&ccedil;&atilde;o r&aacute;pida (FAST REFRESH).<br>
+&nbsp;&nbsp; &nbsp;<br>
+&nbsp;&nbsp; &nbsp;<span style="font-weight: bold; font-style: italic;">Sintaxe:</span><br>
+&nbsp;&nbsp; &nbsp;<span style="font-weight: bold; color: rgb(0, 0, 153);">create_snapshot_log (schemaname text, mastername text, withwhat text)</span><br>
+&nbsp;&nbsp; &nbsp;<span style="text-decoration: underline;">schemaname</span>: nome do esquema onde est&aacute; a tabela master<br>
+&nbsp;&nbsp; &nbsp;<span style="text-decoration: underline;">mastername</span>: nome da tabela master<br>
+&nbsp;&nbsp; &nbsp;<span style="text-decoration: underline;">withwhat</span>: indica se o snapshot log deve salvar a chave prim&aacute;ria, o OID do registro ou ambos quando registros da tabela master forem atualizados(INSERT, UPDATE, DELETE). Esta cl&aacute;usula tamb&eacute;m especifica se colunas adicionais para futura filtragem de sincroniza&ccedil;&atilde;o, as quais n&atilde;o fazem parte da chave prim&aacute;ria e s&atilde;o referenciadas pelo snapshot, devem ser salvas. A sintaxe &eacute; a seguinte:<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;1) "PRIMARY KEY": indica que a chave prim&aacute;ria de todos os registros atualizados na tabela master devem ser gravados no snapshot log;<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;2) "OID": indica que o OID de todos os registros atualizados na tabela master devem ser gravados no snapshot log;<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;3) "(&lt;filter-columns&gt;)" : uma lista separada por v&iacute;rgulas e delimitada por par&ecirc;nteses especificando colunas de filtro adicionais a serem gravadas no snapshot log. Para snapshots atualiz&aacute;veis pelo m&eacute;todo FAST, definidos com subconsultas, todas as colunas referenciadas pela subconsulta devem ser gravadas no snapshot log;<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;4) Qualquer combina&ccedil;&atilde;o das op&ccedil;&otilde;es acima, em qualquer ordem.<br>
+<br>
+<big><span style="font-weight: bold;">6. drop_snapshot_log (implementa&ccedil;&atilde;o de "DROP MATERIALIZED VIEW LOG" ou "DROP SNAPSHOT LOG")</span></big><br>
+&nbsp;&nbsp; &nbsp;Essa fun&ccedil;&atilde;o remove uma tabela de logs acoplada a uma tabela master.<br>
+<br>
+&nbsp;&nbsp; &nbsp;<span style="font-weight: bold; font-style: italic;">Sintaxe:</span><br>
+&nbsp;&nbsp; &nbsp;<span style="font-weight: bold; color: rgb(0, 0, 153);">drop_snapshot_log (schemaname text, mastername text)</span><br>
+&nbsp;&nbsp; &nbsp;<span style="text-decoration: underline;">schemaname</span>: nome do esquema onde est&aacute; a tabela master<br>
+&nbsp;&nbsp; &nbsp;<span style="text-decoration: underline;">mastername</span>: nome da tabela master<br>
+<br>
+<big><span style="font-weight: bold;">7. refresh_snapshot (implementa&ccedil;&atilde;o de "DBMS_SNAPSHOTS.REFRESH")</span></big><br>
+&nbsp;&nbsp; &nbsp;Essa fun&ccedil;&atilde;o atualiza os dados de uma
+vis&atilde;o materializada (MATERIALIZED VIEW ou SNAPSHOT) recebendo
+como par&acirc;metro o nome do esquema e do Snapshot.<br>
+&nbsp;&nbsp; &nbsp;<br>
+&nbsp;&nbsp; &nbsp;<span style="font-weight: bold; font-style: italic;">Sintaxe:</span><br>
+&nbsp;&nbsp; &nbsp;<span style="font-weight: bold; color: rgb(0, 0, 153);">refresh_snapshot (schemaname text, snapshotname text)</span><br>
+&nbsp;&nbsp; &nbsp;<span style="text-decoration: underline;">schemaname</span>: nome do esquema onde est&aacute; o snapshot<br>
+&nbsp;&nbsp; &nbsp;<span style="text-decoration: underline;">snapshotname</span>: nome do snapshot a ser atualizado<br>
+<br>
+</body>
+</html>
